@@ -7,7 +7,7 @@ function PortalDemo() {
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
 
-  // Hardcoded credentials (DEMO ONLY - never do this in production)  
+  // Hardcoded credentials
   const USERNAME = 'demo';
   const PASSWORD = 'demo';
 
@@ -27,7 +27,7 @@ function PortalDemo() {
         const semester = await Portal.getLatestSemester();
         console.log('✓ Semester resolved:', semester);
 
-        // Step 3: Get subjects (parallel fetch is safe now)  
+        // Step 3: Get subjects
         const [subjects, attendance] = await Promise.all([
           Portal.getRegisteredSubjects(semester),
           Portal.getAttendanceOverview(semester)
@@ -142,15 +142,8 @@ function PortalDemo() {
             })}
         </tbody>
         </table>
-        <hr />
-        <div style={{ marginTop: '20px', padding: '10px', backgroundColor: '#f5f5f5' }}>
-          <h3>🎯 Portal Stats</h3>
-          <ul>            <li>✅ Zero JSJIIT knowledge in component</li>
-            <li>✅ Clean domain types (Semester, Subject, Attendance)</li>
-            <li>✅ Predictable error handling</li>
-            <li>✅ Automatic caching (check console logs)</li>
-            <li>✅ Ready for backend swap</li>
-          </ul>        </div>      </div>  );
+        </div>
+  );
 }
 
 export default PortalDemo;

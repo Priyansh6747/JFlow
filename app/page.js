@@ -1,65 +1,156 @@
-import Image from "next/image";
+"use client"
+import { useState, useEffect } from 'react';
+import { Portal } from '@/lib/engine';
 
-export default function Home() {
+function PortalDemo() {
+  const [status, setStatus] = useState('idle'); // idle, logging-in, loading, success, error  
+  const [error, setError] = useState(null);
+  const [data, setData] = useState(null);
+
+  // Hardcoded credentials (DEMO ONLY - never do this in production)  
+  const USERNAME = 'demo';
+  const PASSWORD = 'demo';
+
+  useEffect(() => {
+    async function init() {
+      try {
+        setStatus('logging-in');
+        setError(null);
+
+        // Step 1: Login  
+        await Portal.login(USERNAME, PASSWORD);
+        console.log('✓ Login successful');
+
+        setStatus('loading');
+
+        // Step 2: Get semester (gates everything else)  
+        const semester = await Portal.getLatestSemester();
+        console.log('✓ Semester resolved:', semester);
+
+        // Step 3: Get subjects (parallel fetch is safe now)  
+        const [subjects, attendance] = await Promise.all([
+          Portal.getRegisteredSubjects(semester),
+          Portal.getAttendanceOverview(semester)
+        ]);
+
+        console.log('✓ Data loaded');
+
+        // Calculate stats  
+        const totalSubjects = subjects.length;
+        const belowThreshold = attendance.filter(a => a.percentage < 75).length;
+        const avgAttendance = attendance.reduce((sum, a) => sum + a.percentage, 0) / attendance.length;
+
+        setData({
+          semester,
+          subjects,
+          attendance,
+          stats: {
+            totalSubjects,
+            belowThreshold,
+            avgAttendance: avgAttendance.toFixed(1)
+          }
+        });
+
+        setStatus('success');
+      } catch (err) {
+        console.error('Failed:', err);
+        setError(err.message);
+        setStatus('error');
+      }
+    }
+    init();
+  }, []);
+
+  // Loading states  
+  if (status === 'logging-in') {
+    return <div style={{ padding: '20px' }}>Logging in as {USERNAME}...</div>;
+  }
+
+  if (status === 'loading') {
+    return <div style={{ padding: '20px' }}>Loading student data...</div>;
+  }
+
+  if (status === 'error') {
+    return (
+        <div style={{ padding: '20px', color: 'red' }}>
+          <h2>Error</h2>
+          <p>{error}</p>
+        </div>    );
+  }
+
+  if (status !== 'success' || !data) {
+    return <div style={{ padding: '20px' }}>Initializing...</div>;
+  }
+
+  // Success - show data  
+  const { semester, subjects, attendance, stats } = data;
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.js file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+      <div style={{ padding: '20px', fontFamily: 'monospace' }}>
+        <h1>JAtten Portal Demo</h1>
+        <p style={{ color: 'gray' }}>Logged in as: {USERNAME}</p>
+
+        <hr />
+        <h2>📅 Semester</h2>
+        <p><strong>{semester.label}</strong> (ID: {semester.id})</p>
+
+        <hr />
+        <h2>📊 Overview</h2>
+        <ul>          <li>Total Subjects: {stats.totalSubjects}</li>
+          <li>Average Attendance: {stats.avgAttendance}%</li>
+          <li>Below 75%: {stats.belowThreshold} subjects ⚠️</li>
+        </ul>
+        <hr />
+        <h2>📚 Registered Subjects</h2>
+        <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <thead>          <tr>            <th>Code</th>
+            <th>Name</th>
+            <th>Components</th>
+          </tr>          </thead>          <tbody>          {subjects.map(subject => (
+            <tr key={subject.code}>
+              <td>{subject.code}</td>
+              <td>{subject.name}</td>
+              <td>{subject.components.join(', ')}</td>
+            </tr>          ))}
+        </tbody>
+        </table>
+        <hr />
+        <h2>📈 Attendance Overview</h2>
+        <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <thead>          <tr>            <th>Code</th>
+            <th>Subject</th>
+            <th>Attendance</th>
+            <th>Status</th>
+          </tr>          </thead>          <tbody>          {attendance
+            .sort((a, b) => a.percentage - b.percentage)
+            .map(att => {
+              const isDanger = att.percentage < 75;
+              const isWarning = att.percentage >= 75 && att.percentage < 80;
+
+              return (
+                  <tr key={att.subjectCode} style={{
+                    backgroundColor: isDanger ? '#ffebee' : isWarning ? '#fff9c4' : '#e8f5e9'
+                  }}>
+                    <td>{att.subjectCode}</td>
+                    <td>{att.subjectName}</td>
+                    <td><strong>{att.percentage}%</strong></td>
+                    <td>                        {isDanger && '🚨 Danger'}
+                      {isWarning && '⚠️ Warning'}
+                      {!isDanger && !isWarning && '✅ Safe'}
+                    </td>
+                  </tr>                );
+            })}
+        </tbody>
+        </table>
+        <hr />
+        <div style={{ marginTop: '20px', padding: '10px', backgroundColor: '#f5f5f5' }}>
+          <h3>🎯 Portal Stats</h3>
+          <ul>            <li>✅ Zero JSJIIT knowledge in component</li>
+            <li>✅ Clean domain types (Semester, Subject, Attendance)</li>
+            <li>✅ Predictable error handling</li>
+            <li>✅ Automatic caching (check console logs)</li>
+            <li>✅ Ready for backend swap</li>
+          </ul>        </div>      </div>  );
 }
+
+export default PortalDemo;

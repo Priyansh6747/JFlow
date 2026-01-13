@@ -7,7 +7,6 @@ import {
     createUserWithEmailAndPassword,
     signOut as firebaseSignOut,
     GoogleAuthProvider,
-    GithubAuthProvider,
     signInWithPopup
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -149,13 +148,6 @@ export function AuthProvider({ children }) {
         return result.user;
     };
 
-    // Sign in with GitHub
-    const signInWithGithub = async () => {
-        const provider = new GithubAuthProvider();
-        const result = await signInWithPopup(auth, provider);
-        return result.user;
-    };
-
     // Sign out
     const signOutUser = async () => {
         await firebaseSignOut(auth);
@@ -176,7 +168,6 @@ export function AuthProvider({ children }) {
         signIn,
         signUp,
         signInWithGoogle,
-        signInWithGithub,
         signOut: signOutUser,
         saveJiitCredentials,
         skipOnboarding,

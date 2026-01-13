@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme, themes } from '@/context/ThemeContext';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import {
@@ -21,6 +22,7 @@ import {
 export default function Settings() {
     const router = useRouter();
     const { user, loading: authLoading, jiitStatus, jiitCredentials, saveJiitCredentials, silentSync, signOut } = useAuth();
+    const { theme, setTheme } = useTheme();
 
     // JIIT credentials
     const [enrollment, setEnrollment] = useState('');
@@ -367,6 +369,56 @@ export default function Settings() {
                             ))}
                         </div>
                     )}
+                </div>
+
+                {/* Appearance Section */}
+                <div className="card">
+                    <h3 style={{ marginBottom: '16px' }}>Appearance</h3>
+                    <p className="text-muted" style={{ fontSize: '0.75rem', marginBottom: '16px' }}>
+                        Choose a theme that fits your vibe.
+                    </p>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                        {themes.map(t => (
+                            <div
+                                key={t.id}
+                                onClick={() => setTheme(t.id)}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    padding: '12px',
+                                    borderRadius: 'var(--radius-sm)',
+                                    border: theme === t.id ? `2px solid ${t.accent}` : '2px solid var(--grid-lines)',
+                                    cursor: 'pointer',
+                                    backgroundColor: 'var(--surface-secondary)',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                {/* Color preview */}
+                                <div style={{
+                                    display: 'flex',
+                                    borderRadius: '8px',
+                                    overflow: 'hidden',
+                                    width: '36px',
+                                    height: '36px',
+                                    flexShrink: 0
+                                }}>
+                                    <div style={{ flex: 1, backgroundColor: t.preview[0] }} />
+                                    <div style={{ flex: 1, backgroundColor: t.preview[1] }} />
+                                    <div style={{ flex: 1, backgroundColor: t.preview[2] }} />
+                                </div>
+
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>{t.name}</div>
+                                </div>
+
+                                {theme === t.id && (
+                                    <Check size={16} style={{ color: t.accent }} />
+                                )}
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Account Section */}

@@ -875,3 +875,80 @@ select.input {
   width: 100%;
   max-width: 100%;
 }
+
+/* ============================================
+   Theme Definitions
+   ============================================ */
+
+/* Default: Midnight */
+:root,
+[data-theme="midnight"] {
+  --black: #000000;
+  --surface-primary: #181818;
+  --surface-secondary: #030306;
+  --accent-primary: #889B9A;
+  --accent-secondary: #5F6F6E;
+  --text-primary: #FFFFFF;
+  --text-secondary: #B3B3B3;
+  --text-muted: #6F6F6F;
+  --ui-light: #E0E0E0;
+  --ui-gray: #B6B6B6;
+  --grid-lines: #1E1E1E;
+  --danger: #E57373;
+  --warning: #FFD54F;
+  --success: #81C784;
+}
+
+/* Cyber Blue */
+:root[data-theme="cyber-blue"] {
+  --black: #050A18;
+  --surface-primary: #0D1B2A;
+  --surface-secondary: #081420;
+  --accent-primary: #4FC3F7;
+  --accent-secondary: #29B6F6;
+  --text-primary: #FFFFFF;
+  --text-secondary: #B0BEC5;
+  --text-muted: #607D8B;
+  --ui-light: #E0F7FA;
+  --ui-gray: #90A4AE;
+  --grid-lines: #1B3A4B;
+  --danger: #EF5350;
+  --warning: #FFCA28;
+  --success: #66BB6A;
+}
+
+/* Neon Lime */
+:root[data-theme="neon-lime"] {
+  --black: #0A0F0A;
+  --surface-primary: #1A1F1A;
+  --surface-secondary: #0F140F;
+  --accent-primary: #A0E515;
+  --accent-secondary: #8BC34A;
+  --text-primary: #FFFFFF;
+  --text-secondary: #AED581;
+  --text-muted: #689F38;
+  --ui-light: #DCEDC8;
+  --ui-gray: #9E9E9E;
+  --grid-lines: #2E3B2E;
+  --danger: #FF5252;
+  --warning: #FFEB3B;
+  --success: #A0E515;
+}
+
+/* Aurora */
+:root[data-theme="aurora"] {
+  --black: #0D0015;
+  --surface-primary: #1A0A2E;
+  --surface-secondary: #120820;
+  --accent-primary: #E040FB;
+  --accent-secondary: #AB47BC;
+  --text-primary: #FFFFFF;
+  --text-secondary: #CE93D8;
+  --text-muted: #8E24AA;
+  --ui-light: #F3E5F5;
+  --ui-gray: #9E9E9E;
+  --grid-lines: #311B4E;
+  --danger: #FF4081;
+  --warning: #FFD740;
+  --success: #69F0AE;
+}

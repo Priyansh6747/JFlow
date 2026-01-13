@@ -183,7 +183,7 @@ export default function Timetable() {
     const saveTimetableToFirestore = async (newTimetable) => {
         setIsSaving(true);
         try {
-            await saveTimetable(newTimetable);
+            await SyncManager.saveTimetable(newTimetable, user?.uid);
         } finally {
             setIsSaving(false);
         }

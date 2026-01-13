@@ -185,6 +185,58 @@ h3 {
   color: var(--black);
 }
 
+/* OAuth Buttons */
+.btn-google {
+  background: #FFFFFF;
+  color: #000000;
+  border: 1px solid var(--grid-lines);
+  font-weight: 500;
+}
+
+.btn-google:hover {
+  background: #F5F5F5;
+}
+
+.btn-github {
+  background: var(--surface-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--grid-lines);
+  font-weight: 500;
+}
+
+.btn-github:hover {
+  background: var(--grid-lines);
+}
+
+/* Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  color: var(--text-muted);
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--grid-lines);
+}
+
+/* Privacy Badge */
+.privacy-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(129, 199, 132, 0.1);
+  border: 1px solid var(--success);
+  border-radius: var(--radius-sm);
+  color: var(--success);
+  font-size: 0.75rem;
+}
+
 /* Floating Action Button */
 .fab {
   position: fixed;

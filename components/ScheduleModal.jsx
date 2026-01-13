@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Clock, Calendar, MapPin, User, BookOpen } from 'lucide-react';
 
 /**
  * Modal component for adding/editing schedule entries
@@ -124,109 +124,147 @@ export default function ScheduleModal({
 
                 <form onSubmit={handleSubmit}>
                     <div className="modal-body">
+                        {/* Type Selector (Segmented Control) */}
+                        <div className="input-group">
+                            <label>Class Type</label>
+                            <div className="segmented-control">
+                                {['L', 'T', 'P'].map((type) => (
+                                    <div
+                                        key={type}
+                                        className={`segmented-item type-${type} ${formData.type === type ? 'active' : ''}`}
+                                        onClick={() => handleChange('type', type)}
+                                    >
+                                        <span className="label">
+                                            {type === 'L' ? 'Lecture' : type === 'T' ? 'Tutorial' : 'Practical'}
+                                        </span>
+                                        <span className="sub-label">
+                                            {type === 'L' ? '(L)' : type === 'T' ? '(T)' : '(P)'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
                         {/* Subject Dropdown */}
                         <div className="input-group">
-                            <label htmlFor="subject">Subject *</label>
-                            <select
-                                id="subject"
-                                className={`input ${errors.subjectCode ? 'input-error' : ''}`}
-                                value={formData.subjectCode}
-                                onChange={(e) => handleChange('subjectCode', e.target.value)}
-                            >
-                                <option value="">Select a subject</option>
-                                {subjects.map(subject => (
-                                    <option key={subject.code} value={subject.code}>
-                                        {subject.code} - {subject.name}
-                                    </option>
-                                ))}
-                            </select>
+                            <label htmlFor="subject">Subject</label>
+                            <div style={{ position: 'relative' }}>
+                                <select
+                                    id="subject"
+                                    className={`input ${errors.subjectCode ? 'input-error' : ''}`}
+                                    value={formData.subjectCode}
+                                    onChange={(e) => handleChange('subjectCode', e.target.value)}
+                                    style={{ paddingLeft: '40px' }}
+                                >
+                                    <option value="">Select a subject</option>
+                                    {subjects.map(subject => (
+                                        <option key={subject.code} value={subject.code}>
+                                            {subject.code} - {subject.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <BookOpen size={18} className="text-muted" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                            </div>
                             {errors.subjectCode && (
                                 <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>
                                     {errors.subjectCode}
                                 </span>
                             )}
                             {selectedAttendance !== undefined && (
-                                <span className="text-muted" style={{ fontSize: '0.75rem' }}>
-                                    Current attendance: {selectedAttendance}%
-                                </span>
+                                <div className="flex items-center gap-xs" style={{ marginTop: '4px', fontSize: '0.75rem' }}>
+                                    <span className="text-muted">Current Attendance:</span>
+                                    <span className={selectedAttendance < 75 ? 'text-danger' : 'text-success'}>
+                                        {selectedAttendance}%
+                                    </span>
+                                </div>
                             )}
                         </div>
 
-                        {/* Subject Type */}
-                        <div className="input-group">
-                            <label htmlFor="type">Type *</label>
-                            <select
-                                id="type"
-                                className="input"
-                                value={formData.type}
-                                onChange={(e) => handleChange('type', e.target.value)}
-                            >
-                                <option value="L">Lecture (L)</option>
-                                <option value="T">Tutorial (T)</option>
-                                <option value="P">Practical (P)</option>
-                            </select>
+                        <div className="divider">Time & Duration</div>
+
+                        {/* Time & Duration Row */}
+                        <div className="flex gap-md">
+                            {/* Start Time */}
+                            <div className="input-group" style={{ flex: 1 }}>
+                                <label htmlFor="startTime">Start Time</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="time"
+                                        id="startTime"
+                                        className={`input ${errors.startTime ? 'input-error' : ''}`}
+                                        value={formData.startTime}
+                                        onChange={(e) => handleChange('startTime', e.target.value)}
+                                        style={{ paddingLeft: '40px' }}
+                                    />
+                                    <Clock size={18} className="text-muted" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                                </div>
+                            </div>
+
+                            {/* Duration Input */}
+                            <div className="input-group" style={{ flex: 1 }}>
+                                <label htmlFor="duration">Duration (min)</label>
+                                <input
+                                    type="number"
+                                    id="duration"
+                                    className={`input ${errors.duration ? 'input-error' : ''}`}
+                                    value={formData.duration}
+                                    onChange={(e) => handleChange('duration', parseInt(e.target.value) || 0)}
+                                    min="1"
+                                    max="300"
+                                />
+                            </div>
                         </div>
 
-                        {/* Start Time */}
-                        <div className="input-group">
-                            <label htmlFor="startTime">Start Time *</label>
-                            <input
-                                type="time"
-                                id="startTime"
-                                className={`input ${errors.startTime ? 'input-error' : ''}`}
-                                value={formData.startTime}
-                                onChange={(e) => handleChange('startTime', e.target.value)}
-                            />
-                            {errors.startTime && (
-                                <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>
-                                    {errors.startTime}
-                                </span>
-                            )}
+                        {/* Duration Chips */}
+                        <div className="chips-container">
+                            {[50, 60, 120].map((dur) => (
+                                <div
+                                    key={dur}
+                                    className={`chip ${formData.duration === dur ? 'active' : ''}`}
+                                    onClick={() => handleChange('duration', dur)}
+                                >
+                                    {dur} min
+                                </div>
+                            ))}
                         </div>
 
-                        {/* Duration */}
-                        <div className="input-group">
-                            <label htmlFor="duration">Duration (minutes)</label>
-                            <input
-                                type="number"
-                                id="duration"
-                                className={`input ${errors.duration ? 'input-error' : ''}`}
-                                value={formData.duration}
-                                onChange={(e) => handleChange('duration', parseInt(e.target.value) || 0)}
-                                min="1"
-                                max="300"
-                            />
-                            {errors.duration && (
-                                <span style={{ color: 'var(--danger)', fontSize: '0.75rem' }}>
-                                    {errors.duration}
-                                </span>
-                            )}
-                        </div>
+                        <div className="divider">Location & Details</div>
 
-                        {/* Teacher (optional) */}
-                        <div className="input-group">
-                            <label htmlFor="teacher">Teacher</label>
-                            <input
-                                type="text"
-                                id="teacher"
-                                className="input"
-                                placeholder="Optional"
-                                value={formData.teacher}
-                                onChange={(e) => handleChange('teacher', e.target.value)}
-                            />
-                        </div>
+                        {/* Room & Teacher Row */}
+                        <div className="flex gap-md">
+                            {/* Room */}
+                            <div className="input-group" style={{ flex: 1 }}>
+                                <label htmlFor="room">Room</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="text"
+                                        id="room"
+                                        className="input"
+                                        placeholder="G7"
+                                        value={formData.room}
+                                        onChange={(e) => handleChange('room', e.target.value)}
+                                        style={{ paddingLeft: '40px' }}
+                                    />
+                                    <MapPin size={18} className="text-muted" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                                </div>
+                            </div>
 
-                        {/* Room (optional) */}
-                        <div className="input-group">
-                            <label htmlFor="room">Room</label>
-                            <input
-                                type="text"
-                                id="room"
-                                className="input"
-                                placeholder="Optional"
-                                value={formData.room}
-                                onChange={(e) => handleChange('room', e.target.value)}
-                            />
+                            {/* Teacher */}
+                            <div className="input-group" style={{ flex: 1 }}>
+                                <label htmlFor="teacher">Teacher</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="text"
+                                        id="teacher"
+                                        className="input"
+                                        placeholder="Initial"
+                                        value={formData.teacher}
+                                        onChange={(e) => handleChange('teacher', e.target.value)}
+                                        style={{ paddingLeft: '40px' }}
+                                    />
+                                    <User size={18} className="text-muted" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                                </div>
+                            </div>
                         </div>
                     </div>
 

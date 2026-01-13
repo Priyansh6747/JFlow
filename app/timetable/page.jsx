@@ -385,6 +385,19 @@ export default function Timetable() {
                                         <div className="schedule-card-content">
                                             <div className="schedule-card-subject">
                                                 {schedule.subjectName || schedule.subjectCode}
+                                                <span style={{
+                                                    fontSize: '0.7rem',
+                                                    padding: '2px 6px',
+                                                    borderRadius: '4px',
+                                                    marginLeft: '8px',
+                                                    backgroundColor: schedule.type === 'P' ? 'rgba(255, 213, 79, 0.1)' : schedule.type === 'T' ? 'rgba(129, 199, 132, 0.1)' : 'rgba(136, 155, 154, 0.1)',
+                                                    color: schedule.type === 'P' ? 'var(--warning)' : schedule.type === 'T' ? 'var(--success)' : 'var(--accent-primary)',
+                                                    border: `1px solid ${schedule.type === 'P' ? 'var(--warning)' : schedule.type === 'T' ? 'var(--success)' : 'var(--accent-primary)'}`,
+                                                    verticalAlign: 'middle',
+                                                    display: 'inline-block'
+                                                }}>
+                                                    {schedule.type || 'L'}
+                                                </span>
                                             </div>
                                             <div className="schedule-card-meta">
                                                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>

@@ -28,6 +28,7 @@ export default function ScheduleModal({
 
     const [formData, setFormData] = useState({
         subjectCode: '',
+        type: 'L',
         startTime: '09:00',
         duration: 50,
         teacher: '',
@@ -41,6 +42,7 @@ export default function ScheduleModal({
         if (editData) {
             setFormData({
                 subjectCode: editData.subjectCode || '',
+                type: editData.type || 'L',
                 startTime: editData.startTime || '09:00',
                 duration: editData.duration || 50,
                 teacher: editData.teacher || '',
@@ -50,6 +52,7 @@ export default function ScheduleModal({
             // Reset form for add mode
             setFormData({
                 subjectCode: subjects[0]?.code || '',
+                type: 'L',
                 startTime: '09:00',
                 duration: 50,
                 teacher: '',
@@ -147,6 +150,21 @@ export default function ScheduleModal({
                                     Current attendance: {selectedAttendance}%
                                 </span>
                             )}
+                        </div>
+
+                        {/* Subject Type */}
+                        <div className="input-group">
+                            <label htmlFor="type">Type *</label>
+                            <select
+                                id="type"
+                                className="input"
+                                value={formData.type}
+                                onChange={(e) => handleChange('type', e.target.value)}
+                            >
+                                <option value="L">Lecture (L)</option>
+                                <option value="T">Tutorial (T)</option>
+                                <option value="P">Practical (P)</option>
+                            </select>
                         </div>
 
                         {/* Start Time */}

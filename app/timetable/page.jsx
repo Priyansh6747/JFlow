@@ -132,12 +132,12 @@ export default function Timetable() {
         }
     }, [user, authLoading, router]);
 
-    // Load data on mount
+    // Load data on mount (3-layer: localStorage → Firebase → JIIT)
     useEffect(() => {
         if (!user) return;
 
         const loadData = async () => {
-            // 1. Load from localStorage first (instant)
+            // Layer 3: Load from localStorage first (instant)
             const cached = Storage.loadCached();
 
             if (cached.subjects.length > 0) {
@@ -151,7 +151,19 @@ export default function Timetable() {
                 setTimetable(cached.timetable);
             }
 
-            // 2. If no timetable in localStorage, check Firebase
+            // Layer 2: If no local data, try Firebase cache
+            if (cached.subjects.length === 0 && user) {
+                const firebaseCache = await SyncManager.loadCacheFromFirebase(user.uid);
+                if (firebaseCache) {
+                    setSubjects(firebaseCache.subjects);
+                    setAttendance(firebaseCache.attendance);
+                    // Also save to localStorage for next time
+                    Storage.saveSubjects(firebaseCache.subjects);
+                    Storage.saveAttendance(firebaseCache.attendance);
+                }
+            }
+
+            // Load timetable from Firebase if not in localStorage
             if (!Storage.hasTimetable() && user) {
                 const firebaseTT = await SyncManager.checkTimetableSync(user.uid);
                 if (Object.keys(firebaseTT).length > 0) {
@@ -159,7 +171,7 @@ export default function Timetable() {
                 }
             }
 
-            // 3. Load subjects from Firestore (might have isHidden flags)
+            // Load subjects with isHidden flags from Firestore
             const { subjects: fsSubjects, attendance: fsAttendance } = await SyncManager.loadSubjectsFromFirestore(user.uid);
             if (fsSubjects.length > 0) {
                 setSubjects(fsSubjects);
@@ -168,7 +180,7 @@ export default function Timetable() {
 
             setIsLoading(false);
 
-            // 4. Trigger JIIT sync in background and update UI when done
+            // Layer 1: Trigger JIIT sync in background and update UI when done
             silentSync().then(result => {
                 if (result.status === 'success') {
                     setSubjects(result.data.subjects);

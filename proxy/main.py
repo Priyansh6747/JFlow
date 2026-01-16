@@ -18,8 +18,8 @@ app = FastAPI(title="JFlow CORS Proxy")
 
 # Configure CORS
 ALLOWED_ORIGINS = os.getenv(
-    "ALLOWED_ORIGINS", 
-    "http://localhost:3000,http://127.0.0.1:3000","https://j-flow.vercel.app/"
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000,https://j-flow.vercel.app/"
 ).split(",")
 
 app.add_middleware(

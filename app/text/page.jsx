@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect } from 'react';
-import { Portal } from '@/lib/engine';
+import { Portal } from '@/lib/JiitManager';
 
 function PortalDemo() {
     const [status, setStatus] = useState('idle'); // idle, logging-in, loading, success, error

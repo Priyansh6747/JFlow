@@ -168,8 +168,15 @@ export default function Timetable() {
 
             setIsLoading(false);
 
-            // 4. Trigger JIIT sync in background
-            silentSync();
+            // 4. Trigger JIIT sync in background and update UI when done
+            silentSync().then(result => {
+                if (result.status === 'success') {
+                    setSubjects(result.data.subjects);
+                    setAttendance(result.data.attendance);
+                    setPersonalInfo(result.data.personalInfo);
+                    setLastRefresh(new Date());
+                }
+            });
         };
 
         loadData();

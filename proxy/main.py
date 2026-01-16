@@ -38,6 +38,10 @@ JIIT_BASE_URL = "https://webportal.jiit.ac.in:6011/StudentPortalAPI"
 async def root():
     return {"status": "ok", "message": "JFlow CORS Proxy"}
 
+@app.head("/")
+async def monitor():
+    return 1
+
 @app.get("/health")
 async def health():
     return {"status": "healthy"}

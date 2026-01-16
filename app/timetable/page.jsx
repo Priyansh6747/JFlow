@@ -272,13 +272,31 @@ export default function Timetable() {
 
     // Get attendance percentage for a subject
     const getAttendancePercent = (subjectCode) => {
-        const subjectAtt = attendance.find(a => a.subjectCode === subjectCode);
+        // Try exact match first
+        let subjectAtt = attendance.find(a => a.subjectCode === subjectCode);
+
+        // If not found, try matching by extracting code from parentheses
+        // e.g., "ARTIFICIAL INTELLIGENCE(15B11CI514)" -> match "15B11CI514"
+        if (!subjectAtt && subjectCode) {
+            subjectAtt = attendance.find(a => {
+                // Extract code from a.subjectCode if it has format "NAME(CODE)"
+                const match = a.subjectCode?.match(/\(([^)]+)\)$/);
+                const extractedCode = match ? match[1] : a.subjectCode;
+                return extractedCode === subjectCode || a.subjectCode?.includes(subjectCode);
+            });
+        }
+
         return subjectAtt?.percentage;
     };
 
-    // Create attendance map for modal
+    // Create attendance map for modal - map both full name and code
     const attendanceMap = attendance.reduce((acc, a) => {
         acc[a.subjectCode] = a.percentage;
+        // Also add by extracted code
+        const match = a.subjectCode?.match(/\(([^)]+)\)$/);
+        if (match) {
+            acc[match[1]] = a.percentage;
+        }
         return acc;
     }, {});
 

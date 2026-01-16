@@ -157,8 +157,8 @@ export default function ScheduleModal({
                                     style={{ paddingLeft: '40px' }}
                                 >
                                     <option value="">Select a subject</option>
-                                    {subjects.map(subject => (
-                                        <option key={subject.code} value={subject.code}>
+                                    {subjects.map((subject, index) => (
+                                        <option key={`${subject.code}-${index}`} value={subject.code}>
                                             {subject.code} - {subject.name}
                                         </option>
                                     ))}

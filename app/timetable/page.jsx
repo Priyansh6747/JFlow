@@ -16,7 +16,8 @@ import {
     MapPin,
     User,
     Calendar,
-    Plus
+    Plus,
+    BarChart3
 } from 'lucide-react';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -337,6 +338,13 @@ export default function Timetable() {
                 </div>
                 <div className="flex items-center gap-sm">
                     <JiitStatusBadge status={jiitStatus} />
+                    <button
+                        className="btn btn-ghost"
+                        onClick={() => router.push('/attendance')}
+                        title="Attendance"
+                    >
+                        <BarChart3 size={18} />
+                    </button>
                     <button className="btn btn-ghost" onClick={handleSettings}>
                         <Settings size={18} />
                     </button>

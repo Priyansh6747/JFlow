@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Storage } from '@/lib/storage';
 import { Portal } from '@/lib/JiitManager';
 import AttendanceChart from '@/components/AttendanceChart';
-import { ArrowLeft, RefreshCw, Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Calendar, Clock, CheckCircle, XCircle, Target } from 'lucide-react';
 
 export default function AttendanceDetailPage({ params }) {
     // Unwrap params with React.use() for Next.js 15+
@@ -25,6 +25,11 @@ export default function AttendanceDetailPage({ params }) {
     const [chartData, setChartData] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [targetAttendance, setTargetAttendance] = useState(75);
+
+    useEffect(() => {
+        setTargetAttendance(Storage.getTargetAttendance());
+    }, []);
 
     useEffect(() => {
         loadSubjectData();
@@ -183,10 +188,27 @@ export default function AttendanceDetailPage({ params }) {
                                     <span style={{
                                         fontSize: '2rem',
                                         fontWeight: '600',
-                                        color: subjectInfo.percentage >= 75 ? 'var(--success)' :
-                                            subjectInfo.percentage >= 50 ? 'var(--warning)' : 'var(--danger)'
+                                        color: subjectInfo.percentage >= targetAttendance ? '#00D9FF' :
+                                            subjectInfo.percentage >= targetAttendance - 10 ? '#F5A623' : '#FF6B6B'
                                     }}>
                                         {Math.round(subjectInfo.percentage || 0)}%
+                                    </span>
+                                </div>
+
+                                {/* Target indicator */}
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    marginBottom: '12px',
+                                    padding: '6px 10px',
+                                    backgroundColor: 'var(--surface-secondary)',
+                                    borderRadius: '6px',
+                                    width: 'fit-content'
+                                }}>
+                                    <Target size={14} style={{ color: 'var(--accent-primary)' }} />
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                        Target: {targetAttendance}%
                                     </span>
                                 </div>
 

@@ -14,15 +14,17 @@ export default function AttendanceCard({
     attendedClasses,
     totalClasses,
     Lpercentage,
-    Tpercentage
+    Tpercentage,
+    targetAttendance = 75
 }) {
     const router = useRouter();
 
-    // Determine color based on percentage
+    // Determine color based on percentage relative to target
+    // Cyan/teal aesthetic color scheme
     const getColor = (pct) => {
-        if (pct >= 85) return 'var(--success)';
-        if (pct >= 75) return 'var(--warning)';
-        return 'var(--danger)';
+        if (pct >= targetAttendance) return '#00D9FF';      // Cyan - above target
+        if (pct >= targetAttendance - 10) return '#F5A623'; // Warm orange - close to target
+        return '#FF6B6B';                                    // Coral red - below target
     };
 
     const color = getColor(percentage);
@@ -94,11 +96,11 @@ export default function AttendanceCard({
                     top: '50%',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
-                    fontSize: '1rem',
+                    fontSize: '0.9rem',
                     fontWeight: '600',
                     color: color
                 }}>
-                    {Math.round(percentage)}
+                    {Math.round(percentage)}%
                 </div>
             </div>
 

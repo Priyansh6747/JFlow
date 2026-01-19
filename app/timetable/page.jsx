@@ -117,13 +117,16 @@ export default function Timetable() {
     const [editingSchedule, setEditingSchedule] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [targetAttendance, setTargetAttendance] = useState(75);
 
-    // Get today's day name
+    // Get today's day name and load target attendance
     useEffect(() => {
         const today = new Date().getDay();
         if (today >= 1 && today <= 6) {
             setSelectedDay(DAYS[today - 1]);
         }
+        // Load target attendance from storage
+        setTargetAttendance(Storage.getTargetAttendance());
     }, []);
 
     // Auth check
@@ -415,8 +418,6 @@ export default function Timetable() {
                         todaySchedule.map((schedule, index) => {
                             const endTime = getEndTime(schedule.startTime, schedule.duration);
                             const attendancePercent = getAttendancePercent(schedule.subjectCode);
-                            const isDanger = attendancePercent !== undefined && attendancePercent < 75;
-                            const isWarning = attendancePercent !== undefined && attendancePercent >= 75 && attendancePercent < 80;
 
                             const nextSchedule = todaySchedule[index + 1];
                             const gap = nextSchedule ? getGapMinutes(endTime, nextSchedule.startTime) : null;
@@ -462,7 +463,18 @@ export default function Timetable() {
                                         </div>
 
                                         {attendancePercent !== undefined && (
-                                            <div className={`schedule-card-badge ${isDanger ? 'danger' : isWarning ? 'warning' : ''}`}>
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                minWidth: '48px',
+                                                height: '48px',
+                                                borderRadius: '9999px',
+                                                border: `2px solid ${attendancePercent >= targetAttendance ? '#00D9FF' : attendancePercent >= targetAttendance - 10 ? '#F5A623' : '#FF6B6B'}`,
+                                                fontSize: '0.75rem',
+                                                fontWeight: '600',
+                                                color: attendancePercent >= targetAttendance ? '#00D9FF' : attendancePercent >= targetAttendance - 10 ? '#F5A623' : '#FF6B6B'
+                                            }}>
                                                 {attendancePercent}%
                                             </div>
                                         )}

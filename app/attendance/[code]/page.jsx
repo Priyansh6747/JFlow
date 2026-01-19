@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Storage } from '@/lib/storage';
 import { Portal } from '@/lib/JiitManager';
 import AttendanceChart from '@/components/AttendanceChart';
-import { ArrowLeft, RefreshCw, Calendar, Clock, CheckCircle, XCircle, Target } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Calendar, Clock, CheckCircle, XCircle, Target, Loader2 } from 'lucide-react';
 
 export default function AttendanceDetailPage({ params }) {
     // Unwrap params with React.use() for Next.js 15+
@@ -19,11 +19,12 @@ export default function AttendanceDetailPage({ params }) {
     const decodedCode = decodeURIComponent(code);
 
     const router = useRouter();
-    const { jiitCredentials } = useAuth();
+    const { jiitCredentials, jiitStatus } = useAuth();
     const [subjectInfo, setSubjectInfo] = useState(null);
     const [dailyData, setDailyData] = useState([]);
     const [chartData, setChartData] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isFetchingDaily, setIsFetchingDaily] = useState(false);
     const [error, setError] = useState(null);
     const [targetAttendance, setTargetAttendance] = useState(75);
 
@@ -35,6 +36,14 @@ export default function AttendanceDetailPage({ params }) {
         loadSubjectData();
     }, [decodedCode]);
 
+    // When sync completes, try to fetch daily attendance if we don't have it yet
+    useEffect(() => {
+        if (jiitStatus === 'online' && subjectInfo && chartData.length === 0 && !isFetchingDaily) {
+            console.log('Sync completed, fetching daily attendance...');
+            fetchDailyAttendance(subjectInfo);
+        }
+    }, [jiitStatus, subjectInfo]);
+
     const loadSubjectData = async () => {
         setIsLoading(true);
         setError(null);
@@ -42,17 +51,48 @@ export default function AttendanceDetailPage({ params }) {
         try {
             // Get subject info from localStorage attendance
             const attendance = Storage.getAttendance();
-            const subject = attendance.find(a => a.subjectCode === decodedCode);
 
-            if (subject) {
-                setSubjectInfo(subject);
+            // Try multiple matching strategies:
+            // 1. Exact match on subjectCode
+            // 2. Match by extracting code from parentheses e.g., "NAME(CODE)" -> CODE
+            // 3. Match on individualsubjectcode if available
+            let subject = attendance.find(a => a.subjectCode === decodedCode);
+
+            if (!subject) {
+                subject = attendance.find(a => {
+                    // Extract code from parentheses
+                    const match = a.subjectCode?.match(/\(([^)]+)\)$/);
+                    const extractedCode = match ? match[1] : null;
+                    return extractedCode === decodedCode ||
+                        a.individualsubjectcode === decodedCode ||
+                        a.subjectCode?.includes(decodedCode);
+                });
             }
 
-            // Try to fetch daily attendance from JIIT
-            if (jiitCredentials && subject?._subjectId) {
-                await fetchDailyAttendance(subject);
+            if (subject) {
+                // Ensure we have the subjectId mapped correctly
+                const normalizedSubject = {
+                    ...subject,
+                    _subjectId: subject._subjectId || subject.subjectid || subject.subjectId,
+                    _componentIds: subject._componentIds || [
+                        subject.Lsubjectcomponentid,
+                        subject.Tsubjectcomponentid,
+                        subject.Psubjectcomponentid
+                    ].filter(Boolean)
+                };
+                setSubjectInfo(normalizedSubject);
+
+                // Only attempt to fetch daily attendance if we're certain JIIT is online
+                // This prevents race conditions with background sync
+                if (jiitStatus === 'online' && jiitCredentials && normalizedSubject._subjectId) {
+                    await fetchDailyAttendance(normalizedSubject);
+                } else if (jiitStatus === 'syncing' || jiitStatus === 'unknown') {
+                    // Wait for sync to complete - the useEffect watching jiitStatus will trigger fetch
+                    console.log('Waiting for JIIT sync to complete before fetching daily attendance...');
+                } else {
+                    setDailyData([]);
+                }
             } else {
-                // Can't fetch - no credentials or subject info
                 setDailyData([]);
             }
         } catch (err) {
@@ -64,35 +104,56 @@ export default function AttendanceDetailPage({ params }) {
     };
 
     const fetchDailyAttendance = async (subject) => {
+        setIsFetchingDaily(true);
         try {
             // Ensure we're logged in
             await Portal.login(jiitCredentials.enrollment, jiitCredentials.password);
             const semester = await Portal.getLatestSemester();
 
+            // Use individualsubjectcode (e.g., "15B11CI514") not the full name
+            const subjectCode = subject.individualsubjectcode || subject.subjectCode;
+
             const daily = await Portal.getSubjectDailyAttendance(
                 semester,
                 subject._subjectId,
-                subject.subjectCode,
+                subjectCode,
                 subject._componentIds || []
             );
 
-            if (daily && Array.isArray(daily)) {
+            if (daily && Array.isArray(daily) && daily.length > 0) {
                 setDailyData(daily);
+
+                // Sort chronologically for accurate cumulative calculation
+                const sortedDaily = [...daily].sort((a, b) => {
+                    const parseDate = (item) => {
+                        const dt = item.datetime || item.attendancedate || '';
+                        const datePart = dt.split(' (')[0];
+                        const parts = datePart.split('/');
+                        if (parts.length === 3) {
+                            return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                        }
+                        return new Date(0);
+                    };
+                    return parseDate(a) - parseDate(b); // Ascending order (oldest first)
+                });
 
                 // Transform to chart data - cumulative attendance over time
                 const chartPoints = [];
                 let attended = 0;
                 let total = 0;
 
-                daily.forEach((d, i) => {
+                sortedDaily.forEach((d, i) => {
                     total++;
-                    if (d.studentstatus === 'Present' || d.studentstatus === 'P' || d.present === 'Present') {
+                    // Check various field names for present status
+                    const status = d.present || d.studentstatus || '';
+                    if (status === 'Present' || status === 'P') {
                         attended++;
                     }
 
                     // Add a data point every few classes or on last
-                    if (i === 0 || i === daily.length - 1 || i % Math.ceil(daily.length / 6) === 0) {
-                        const date = d.attendancedate || d.date || new Date().toISOString();
+                    if (i === 0 || i === sortedDaily.length - 1 || i % Math.ceil(sortedDaily.length / 6) === 0) {
+                        // Use 'datetime' field which has format like "16/01/2026 (12:00:PM - 12:50 PM)"
+                        const date = d.datetime || d.attendancedate || d.date || new Date().toISOString();
                         chartPoints.push({
                             date,
                             percentage: total > 0 ? Math.round((attended / total) * 100) : 0
@@ -105,6 +166,8 @@ export default function AttendanceDetailPage({ params }) {
         } catch (err) {
             console.warn('Failed to fetch daily attendance:', err.message);
             // Not critical - we still show the overview
+        } finally {
+            setIsFetchingDaily(false);
         }
     };
 
@@ -240,7 +303,24 @@ export default function AttendanceDetailPage({ params }) {
                             <h3 style={{ fontSize: '0.9rem', marginBottom: '12px', color: 'var(--text-secondary)' }}>
                                 Attendance Trend
                             </h3>
-                            <AttendanceChart data={chartData} height={180} />
+                            {jiitStatus === 'syncing' || isFetchingDaily ? (
+                                <div style={{
+                                    height: 180,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                    color: 'var(--text-secondary)'
+                                }}>
+                                    <Loader2 size={24} className="animate-spin" style={{ color: '#00D9FF' }} />
+                                    <span style={{ fontSize: '0.85rem' }}>
+                                        {jiitStatus === 'syncing' ? 'Waiting for sync to complete...' : 'Loading attendance data...'}
+                                    </span>
+                                </div>
+                            ) : (
+                                <AttendanceChart data={chartData} height={180} targetAttendance={targetAttendance} />
+                            )}
                         </div>
 
                         {/* Daily Breakdown */}
@@ -255,40 +335,82 @@ export default function AttendanceDetailPage({ params }) {
                                     Class History ({dailyData.length} classes)
                                 </h3>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {dailyData.slice(-10).reverse().map((d, i) => (
-                                        <div
-                                            key={i}
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                padding: '10px 12px',
-                                                backgroundColor: 'var(--background)',
-                                                borderRadius: '8px',
-                                                fontSize: '0.85rem'
-                                            }}
-                                        >
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                {(d.studentstatus === 'Present' || d.studentstatus === 'P') ? (
-                                                    <CheckCircle size={16} style={{ color: 'var(--success)' }} />
-                                                ) : (
-                                                    <XCircle size={16} style={{ color: 'var(--danger)' }} />
-                                                )}
-                                                <span>
-                                                    {d.attendancedate ? new Date(d.attendancedate).toLocaleDateString('en-US', {
-                                                        month: 'short',
-                                                        day: 'numeric'
-                                                    }) : `Class ${dailyData.length - i}`}
-                                                </span>
-                                            </div>
-                                            <span style={{
-                                                color: getStatusColor(d.studentstatus),
-                                                fontWeight: '500'
-                                            }}>
-                                                {d.studentstatus || 'N/A'}
-                                            </span>
-                                        </div>
-                                    ))}
+                                    {[...dailyData]
+                                        .sort((a, b) => {
+                                            // Parse DD/MM/YYYY format for proper date sorting
+                                            const parseDate = (item) => {
+                                                const dt = item.datetime || item.attendancedate || '';
+                                                const datePart = dt.split(' (')[0];
+                                                const parts = datePart.split('/');
+                                                if (parts.length === 3) {
+                                                    return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                                                }
+                                                return new Date(0);
+                                            };
+                                            return parseDate(b) - parseDate(a); // Descending order
+                                        })
+                                        .slice(0, 10)
+                                        .map((d, i) => {
+                                            // Use 'present' field from API, fallback to 'studentstatus'
+                                            const status = d.present || d.studentstatus || 'Unknown';
+                                            const isPresent = status === 'Present' || status === 'P';
+
+                                            // Parse datetime like "16/01/2026 (12:00:PM - 12:50 PM)"
+                                            const datetime = d.datetime || d.attendancedate || '';
+                                            const datePart = datetime.split(' (')[0]; // "16/01/2026"
+                                            const timePart = datetime.match(/\((.+)\)/)?.[1] || ''; // "12:00:PM - 12:50 PM"
+
+                                            // Format date nicely
+                                            let formattedDate = datePart;
+                                            if (datePart) {
+                                                const parts = datePart.split('/');
+                                                if (parts.length === 3) {
+                                                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                                    formattedDate = `${months[parseInt(parts[1]) - 1]} ${parseInt(parts[0])}`;
+                                                }
+                                            }
+
+                                            return (
+                                                <div
+                                                    key={i}
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between',
+                                                        padding: '12px 14px',
+                                                        backgroundColor: 'var(--background)',
+                                                        borderRadius: '10px',
+                                                        fontSize: '0.85rem',
+                                                        borderLeft: `3px solid ${isPresent ? '#00D9FF' : '#FF6B6B'}`
+                                                    }}
+                                                >
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                        {isPresent ? (
+                                                            <CheckCircle size={18} style={{ color: '#00D9FF' }} />
+                                                        ) : (
+                                                            <XCircle size={18} style={{ color: '#FF6B6B' }} />
+                                                        )}
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                            <span style={{ fontWeight: '500' }}>
+                                                                {formattedDate || `Class ${dailyData.length - i}`}
+                                                            </span>
+                                                            {(d.classtype || timePart) && (
+                                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                                    {d.classtype}{d.classtype && timePart ? ' • ' : ''}{timePart}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <span style={{
+                                                        color: isPresent ? '#00D9FF' : '#FF6B6B',
+                                                        fontWeight: '600',
+                                                        fontSize: '0.8rem'
+                                                    }}>
+                                                        {status}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
                                 </div>
                                 {dailyData.length > 10 && (
                                     <p className="text-muted" style={{ textAlign: 'center', marginTop: '12px', fontSize: '0.75rem' }}>

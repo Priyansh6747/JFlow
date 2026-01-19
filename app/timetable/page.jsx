@@ -286,8 +286,8 @@ export default function Timetable() {
         setIsModalOpen(false);
     };
 
-    // Get attendance percentage for a subject
-    const getAttendancePercent = (subjectCode) => {
+    // Get attendance info for a subject (percentage + present/total)
+    const getAttendanceInfo = (subjectCode) => {
         // Try exact match first
         let subjectAtt = attendance.find(a => a.subjectCode === subjectCode);
 
@@ -302,7 +302,20 @@ export default function Timetable() {
             });
         }
 
-        return subjectAtt?.percentage;
+        if (!subjectAtt) return null;
+
+        return {
+            percentage: subjectAtt.percentage,
+            Lpercentage: subjectAtt.Lpercentage,
+            Tpercentage: subjectAtt.Tpercentage,
+            present: subjectAtt.LTpresent,
+            total: subjectAtt.LTtotal
+        };
+    };
+
+    // Keep old function for backward compatibility
+    const getAttendancePercent = (subjectCode) => {
+        return getAttendanceInfo(subjectCode)?.percentage;
     };
 
     // Create attendance map for modal - map both full name and code
@@ -417,7 +430,8 @@ export default function Timetable() {
                     ) : (
                         todaySchedule.map((schedule, index) => {
                             const endTime = getEndTime(schedule.startTime, schedule.duration);
-                            const attendancePercent = getAttendancePercent(schedule.subjectCode);
+                            const attendanceInfo = getAttendanceInfo(schedule.subjectCode);
+                            const attendancePercent = attendanceInfo?.percentage;
 
                             const nextSchedule = todaySchedule[index + 1];
                             const gap = nextSchedule ? getGapMinutes(endTime, nextSchedule.startTime) : null;
@@ -465,17 +479,35 @@ export default function Timetable() {
                                         {attendancePercent !== undefined && (
                                             <div style={{
                                                 display: 'flex',
+                                                flexDirection: 'column',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                minWidth: '48px',
-                                                height: '48px',
-                                                borderRadius: '9999px',
-                                                border: `2px solid ${attendancePercent >= targetAttendance ? '#00D9FF' : attendancePercent >= targetAttendance - 10 ? '#F5A623' : '#FF6B6B'}`,
-                                                fontSize: '0.75rem',
-                                                fontWeight: '600',
-                                                color: attendancePercent >= targetAttendance ? '#00D9FF' : attendancePercent >= targetAttendance - 10 ? '#F5A623' : '#FF6B6B'
+                                                minWidth: '52px',
+                                                gap: '2px'
                                             }}>
-                                                {attendancePercent}%
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    width: '44px',
+                                                    height: '44px',
+                                                    borderRadius: '9999px',
+                                                    border: `2px solid ${attendancePercent >= targetAttendance ? '#00D9FF' : attendancePercent >= targetAttendance - 10 ? '#F5A623' : '#FF6B6B'}`,
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: '600',
+                                                    color: attendancePercent >= targetAttendance ? '#00D9FF' : attendancePercent >= targetAttendance - 10 ? '#F5A623' : '#FF6B6B'
+                                                }}>
+                                                    {attendancePercent}%
+                                                </div>
+                                                {attendanceInfo?.present !== undefined && attendanceInfo?.total !== undefined && (
+                                                    <span style={{
+                                                        fontSize: '0.65rem',
+                                                        color: 'var(--text-secondary)',
+                                                        whiteSpace: 'nowrap'
+                                                    }}>
+                                                        {attendanceInfo.present}/{attendanceInfo.total}
+                                                    </span>
+                                                )}
                                             </div>
                                         )}
                                     </div>

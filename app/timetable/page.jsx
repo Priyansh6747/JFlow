@@ -349,8 +349,7 @@ export default function Timetable() {
             {/* Header */}
             <div className="header">
                 <div className="header-title">
-                    <span className="header-name">{personalInfo?.studentname || user?.email?.split('@')[0] || 'Student'}</span>
-                    <span className="header-batch">{personalInfo?.enrollmentno || ''}</span>
+                    <span className="header-name">JFlow</span>
                 </div>
                 <div className="flex items-center gap-sm">
                     <JiitStatusBadge status={jiitStatus} />

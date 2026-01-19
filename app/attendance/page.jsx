@@ -2,18 +2,20 @@
 
 /**
  * Attendance Page - Shows all subjects with attendance
+ * Triggers silent caching of daily attendance for all subjects
  */
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Storage } from '@/lib/storage';
+import { DailyAttendanceCache } from '@/lib/dailyAttendanceCache';
 import AttendanceCard from '@/components/AttendanceCard';
 import { ArrowLeft, RefreshCw, Target } from 'lucide-react';
 
 export default function AttendancePage() {
     const router = useRouter();
-    const { user, silentSync, jiitStatus } = useAuth();
+    const { user, jiitCredentials, silentSync, jiitStatus } = useAuth();
     const [attendance, setAttendance] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -29,6 +31,14 @@ export default function AttendancePage() {
         setTargetAttendance(Storage.getTargetAttendance());
         setIsLoading(false);
     }, []);
+
+    // Trigger silent caching of daily attendance when JIIT is online
+    useEffect(() => {
+        if (jiitStatus === 'online' && jiitCredentials) {
+            const uid = user?.uid || null;
+            DailyAttendanceCache.triggerIfNeeded(jiitCredentials, uid);
+        }
+    }, [jiitStatus, jiitCredentials, user]);
 
     const handleRefresh = async () => {
         setIsRefreshing(true);

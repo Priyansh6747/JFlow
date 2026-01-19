@@ -3,6 +3,7 @@
 /**
  * Attendance Detail Page - Shows daily attendance for a specific subject
  * Fetches per-class attendance from JIIT and displays a graph
+ * Uses 2-layer cache (localStorage + Firestore) with 6-hour expiry
  */
 
 import { useState, useEffect, use } from 'react';
@@ -10,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Storage } from '@/lib/storage';
 import { Portal } from '@/lib/JiitManager';
+import { DailyAttendanceCache } from '@/lib/dailyAttendanceCache';
 import AttendanceChart from '@/components/AttendanceChart';
 import { ArrowLeft, RefreshCw, Calendar, Clock, CheckCircle, XCircle, Target, Loader2 } from 'lucide-react';
 
@@ -19,12 +21,13 @@ export default function AttendanceDetailPage({ params }) {
     const decodedCode = decodeURIComponent(code);
 
     const router = useRouter();
-    const { jiitCredentials, jiitStatus } = useAuth();
+    const { user, jiitCredentials, jiitStatus } = useAuth();
     const [subjectInfo, setSubjectInfo] = useState(null);
     const [dailyData, setDailyData] = useState([]);
     const [chartData, setChartData] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isFetchingDaily, setIsFetchingDaily] = useState(false);
+    const [fromCache, setFromCache] = useState(false);
     const [error, setError] = useState(null);
     const [targetAttendance, setTargetAttendance] = useState(75);
 
@@ -103,25 +106,42 @@ export default function AttendanceDetailPage({ params }) {
         }
     };
 
-    const fetchDailyAttendance = async (subject) => {
+    const fetchDailyAttendance = async (subject, forceRefresh = false) => {
         setIsFetchingDaily(true);
+        setFromCache(false);
+
         try {
-            // Ensure we're logged in
-            await Portal.login(jiitCredentials.enrollment, jiitCredentials.password);
-            const semester = await Portal.getLatestSemester();
-
-            // Use individualsubjectcode (e.g., "15B11CI514") not the full name
             const subjectCode = subject.individualsubjectcode || subject.subjectCode;
+            const uid = user?.uid || null;
 
-            const daily = await Portal.getSubjectDailyAttendance(
-                semester,
-                subject._subjectId,
-                subjectCode,
-                subject._componentIds || []
-            );
+            let daily;
+            let wasFromCache = false;
+
+            // Use cache unless force refresh
+            if (!forceRefresh) {
+                const cached = Storage.getSubjectDailyAttendance(subjectCode);
+                if (cached && !cached.isStale) {
+                    console.log(`[DetailPage] Using cached data for ${subjectCode}`);
+                    daily = cached.data;
+                    wasFromCache = true;
+                }
+            }
+
+            // If no cache or stale, fetch through cache manager
+            if (!daily && jiitCredentials) {
+                const result = await DailyAttendanceCache.get(
+                    subjectCode,
+                    subject,
+                    jiitCredentials,
+                    uid
+                );
+                daily = result.data;
+                wasFromCache = result.fromCache;
+            }
 
             if (daily && Array.isArray(daily) && daily.length > 0) {
                 setDailyData(daily);
+                setFromCache(wasFromCache);
 
                 // Sort chronologically for accurate cumulative calculation
                 const sortedDaily = [...daily].sort((a, b) => {
@@ -300,9 +320,22 @@ export default function AttendanceDetailPage({ params }) {
                             marginBottom: '20px',
                             border: '1px solid var(--border)'
                         }}>
-                            <h3 style={{ fontSize: '0.9rem', marginBottom: '12px', color: 'var(--text-secondary)' }}>
-                                Attendance Trend
-                            </h3>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', margin: 0 }}>
+                                    Attendance Trend
+                                </h3>
+                                {fromCache && !isFetchingDaily && (
+                                    <span style={{
+                                        fontSize: '0.7rem',
+                                        color: 'var(--text-secondary)',
+                                        padding: '2px 8px',
+                                        backgroundColor: 'var(--surface-secondary)',
+                                        borderRadius: '4px'
+                                    }}>
+                                        Cached
+                                    </span>
+                                )}
+                            </div>
                             {jiitStatus === 'syncing' || isFetchingDaily ? (
                                 <div style={{
                                     height: 180,

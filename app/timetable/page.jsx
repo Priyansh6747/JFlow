@@ -17,7 +17,9 @@ import {
     User,
     Calendar,
     Plus,
-    BarChart3
+    BarChart3,
+    Target,
+    TrendingUp
 } from 'lucide-react';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -118,6 +120,45 @@ export default function Timetable() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [targetAttendance, setTargetAttendance] = useState(75);
+
+    // Handle target change and save to storage
+    const handleTargetChange = (value) => {
+        const numValue = parseInt(value) || 0;
+        const clampedValue = Math.max(0, Math.min(100, numValue));
+        setTargetAttendance(clampedValue);
+        Storage.setTargetAttendance(clampedValue);
+    };
+
+    /**
+     * Calculate attendance guidance: classes needed or can skip
+     * @param {number} attended - Classes attended
+     * @param {number} total - Total classes held
+     * @param {number} target - Target percentage
+     * @returns {{ type: 'need' | 'safe' | 'at-target', count: number }}
+     */
+    const getAttendanceGuidance = (attended, total, target) => {
+        if (!attended || !total || total === 0) return null;
+
+        const currentPercent = (attended / total) * 100;
+
+        if (currentPercent >= target) {
+            // Calculate how many classes can skip while staying at target
+            // (attended) / (total + x) >= target/100
+            // attended * 100 >= target * (total + x)
+            // 100 * attended / target - total >= x
+            const canSkip = Math.floor((attended * 100 / target) - total);
+            return { type: 'safe', count: Math.max(0, canSkip) };
+        } else {
+            // Calculate how many classes need to attend to reach target
+            // (attended + x) / (total + x) >= target/100
+            // 100 * (attended + x) >= target * (total + x)
+            // 100 * attended + 100x >= target * total + target * x
+            // (100 - target) * x >= target * total - 100 * attended
+            // x >= (target * total - 100 * attended) / (100 - target)
+            const needToAttend = Math.ceil((target * total - 100 * attended) / (100 - target));
+            return { type: 'need', count: Math.max(1, needToAttend) };
+        }
+    };
 
     // Get today's day name and load target attendance
     useEffect(() => {
@@ -402,6 +443,59 @@ export default function Timetable() {
                     ))}
                 </div>
 
+                {/* Target Attendance Input */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    backgroundColor: 'var(--surface-primary)'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Target size={16} style={{ color: 'var(--accent-primary)' }} />
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Target</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {[65, 75, 85].map((preset) => (
+                            <button
+                                key={preset}
+                                onClick={() => handleTargetChange(preset)}
+                                style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '20px',
+                                    border: targetAttendance === preset ? '1px solid var(--accent-primary)' : '1px solid var(--grid-lines)',
+                                    backgroundColor: targetAttendance === preset ? 'var(--accent-primary)' : 'transparent',
+                                    color: targetAttendance === preset ? 'var(--black)' : 'var(--text-secondary)',
+                                    fontSize: '0.8rem',
+                                    fontWeight: '500',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {preset}%
+                            </button>
+                        ))}
+                        <input
+                            type="number"
+                            value={targetAttendance}
+                            onChange={(e) => handleTargetChange(e.target.value)}
+                            min="0"
+                            max="100"
+                            style={{
+                                width: '55px',
+                                padding: '6px 8px',
+                                borderRadius: '8px',
+                                border: '1px solid var(--grid-lines)',
+                                backgroundColor: 'var(--surface-secondary)',
+                                color: 'var(--text-primary)',
+                                fontSize: '0.85rem',
+                                textAlign: 'center'
+                            }}
+                        />
+                    </div>
+                </div>
+
                 {/* Add/Edit header */}
                 <div className="flex items-center justify-between">
                     <button className="btn btn-secondary" onClick={handleAddSchedule} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -486,7 +580,7 @@ export default function Timetable() {
                                                 flexDirection: 'column',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                minWidth: '52px',
+                                                minWidth: '65px',
                                                 gap: '2px'
                                             }}>
                                                 <div style={{
@@ -512,6 +606,55 @@ export default function Timetable() {
                                                         {attendanceInfo.present}/{attendanceInfo.total}
                                                     </span>
                                                 )}
+                                                {/* Guidance: need X or can skip X */}
+                                                {attendanceInfo?.present !== undefined && attendanceInfo?.total !== undefined && (() => {
+                                                    const guidance = getAttendanceGuidance(attendanceInfo.present, attendanceInfo.total, targetAttendance);
+                                                    if (!guidance) return null;
+
+                                                    if (guidance.type === 'safe') {
+                                                        return (
+                                                            <span style={{
+                                                                fontSize: '0.6rem',
+                                                                color: '#00D9FF',
+                                                                whiteSpace: 'nowrap',
+                                                                fontWeight: '500'
+                                                            }}>
+                                                                {guidance.count === 0 ? 'At target' : `Skip ${guidance.count}`}
+                                                            </span>
+                                                        );
+                                                    } else {
+                                                        return (
+                                                            <span style={{
+                                                                fontSize: '0.6rem',
+                                                                color: '#FF6B6B',
+                                                                whiteSpace: 'nowrap',
+                                                                fontWeight: '500'
+                                                            }}>
+                                                                Need {guidance.count}
+                                                            </span>
+                                                        );
+                                                    }
+                                                })()}
+                                                {/* Planning link */}
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        router.push(`/planning/${encodeURIComponent(schedule.subjectCode)}`);
+                                                    }}
+                                                    title="Plan Attendance"
+                                                    style={{
+                                                        background: 'none',
+                                                        border: 'none',
+                                                        padding: '4px',
+                                                        cursor: 'pointer',
+                                                        color: 'var(--text-secondary)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        marginTop: '2px'
+                                                    }}
+                                                >
+                                                    <TrendingUp size={14} />
+                                                </button>
                                             </div>
                                         )}
                                     </div>

@@ -14,7 +14,7 @@ import { Portal } from '@/lib/JiitManager';
 import { DailyAttendanceCache } from '@/lib/dailyAttendanceCache';
 import AttendanceChart from '@/components/AttendanceChart';
 import AttendanceCalendar from '@/components/AttendanceCalendar';
-import { ArrowLeft, RefreshCw, Calendar, Clock, CheckCircle, XCircle, Target, Loader2 } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Calendar, Clock, CheckCircle, XCircle, Target, Loader2, TrendingUp } from 'lucide-react';
 
 export default function AttendanceDetailPage({ params }) {
     // Unwrap params with React.use() for Next.js 15+
@@ -31,6 +31,7 @@ export default function AttendanceDetailPage({ params }) {
     const [fromCache, setFromCache] = useState(false);
     const [error, setError] = useState(null);
     const [targetAttendance, setTargetAttendance] = useState(75);
+    const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'list'
 
     useEffect(() => {
         setTargetAttendance(Storage.getTargetAttendance());
@@ -233,6 +234,14 @@ export default function AttendanceDetailPage({ params }) {
                 >
                     <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
                 </button>
+                <button
+                    className="btn btn-ghost"
+                    onClick={() => router.push(`/planning/${encodeURIComponent(decodedCode)}`)}
+                    title="Plan Ahead"
+                    style={{ padding: '8px' }}
+                >
+                    <TrendingUp size={18} />
+                </button>
             </header>
 
             {/* Content */}
@@ -372,110 +381,152 @@ export default function AttendanceDetailPage({ params }) {
                             )}
                         </div>
 
-                        {/* Calendar View */}
-                        {dailyData.length > 0 && (
-                            <div style={{ marginBottom: '20px' }}>
-                                <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                                    Calendar View
-                                </h3>
-                                <AttendanceCalendar dailyData={dailyData} />
-                            </div>
-                        )}
-
-                        {/* Daily Breakdown */}
+                        {/* Tabbed View: Calendar / List */}
                         {dailyData.length > 0 && (
                             <div style={{
                                 backgroundColor: 'var(--surface)',
                                 borderRadius: '12px',
-                                padding: '16px',
-                                border: '1px solid var(--border)'
+                                border: '1px solid var(--border)',
+                                overflow: 'hidden'
                             }}>
-                                <h3 style={{ fontSize: '0.9rem', marginBottom: '12px', color: 'var(--text-secondary)' }}>
-                                    Class History ({dailyData.length} classes)
-                                </h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {[...dailyData]
-                                        .sort((a, b) => {
-                                            // Parse DD/MM/YYYY format for proper date sorting
-                                            const parseDate = (item) => {
-                                                const dt = item.datetime || item.attendancedate || '';
-                                                const datePart = dt.split(' (')[0];
-                                                const parts = datePart.split('/');
-                                                if (parts.length === 3) {
-                                                    return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                                                }
-                                                return new Date(0);
-                                            };
-                                            return parseDate(b) - parseDate(a); // Descending order
-                                        })
-                                        .slice(0, 10)
-                                        .map((d, i) => {
-                                            // Use 'present' field from API, fallback to 'studentstatus'
-                                            const status = d.present || d.studentstatus || 'Unknown';
-                                            const isPresent = status === 'Present' || status === 'P';
-
-                                            // Parse datetime like "16/01/2026 (12:00:PM - 12:50 PM)"
-                                            const datetime = d.datetime || d.attendancedate || '';
-                                            const datePart = datetime.split(' (')[0]; // "16/01/2026"
-                                            const timePart = datetime.match(/\((.+)\)/)?.[1] || ''; // "12:00:PM - 12:50 PM"
-
-                                            // Format date nicely
-                                            let formattedDate = datePart;
-                                            if (datePart) {
-                                                const parts = datePart.split('/');
-                                                if (parts.length === 3) {
-                                                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                                                    formattedDate = `${months[parseInt(parts[1]) - 1]} ${parseInt(parts[0])}`;
-                                                }
-                                            }
-
-                                            return (
-                                                <div
-                                                    key={i}
-                                                    style={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'space-between',
-                                                        padding: '12px 14px',
-                                                        backgroundColor: 'var(--background)',
-                                                        borderRadius: '10px',
-                                                        fontSize: '0.85rem',
-                                                        borderLeft: `3px solid ${isPresent ? '#00D9FF' : '#FF6B6B'}`
-                                                    }}
-                                                >
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                        {isPresent ? (
-                                                            <CheckCircle size={18} style={{ color: '#00D9FF' }} />
-                                                        ) : (
-                                                            <XCircle size={18} style={{ color: '#FF6B6B' }} />
-                                                        )}
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                            <span style={{ fontWeight: '500' }}>
-                                                                {formattedDate || `Class ${dailyData.length - i}`}
-                                                            </span>
-                                                            {(d.classtype || timePart) && (
-                                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                                                    {d.classtype}{d.classtype && timePart ? ' • ' : ''}{timePart}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <span style={{
-                                                        color: isPresent ? '#00D9FF' : '#FF6B6B',
-                                                        fontWeight: '600',
-                                                        fontSize: '0.8rem'
-                                                    }}>
-                                                        {status}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
+                                {/* Tab Headers */}
+                                <div style={{
+                                    display: 'flex',
+                                    borderBottom: '1px solid var(--grid-lines)'
+                                }}>
+                                    <button
+                                        onClick={() => setViewMode('calendar')}
+                                        style={{
+                                            flex: 1,
+                                            padding: '12px 16px',
+                                            background: viewMode === 'calendar' ? 'var(--surface-secondary)' : 'transparent',
+                                            border: 'none',
+                                            borderBottom: viewMode === 'calendar' ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                                            color: viewMode === 'calendar' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                            fontSize: '0.85rem',
+                                            fontWeight: '500',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px'
+                                        }}
+                                    >
+                                        <Calendar size={16} />
+                                        Calendar
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('list')}
+                                        style={{
+                                            flex: 1,
+                                            padding: '12px 16px',
+                                            background: viewMode === 'list' ? 'var(--surface-secondary)' : 'transparent',
+                                            border: 'none',
+                                            borderBottom: viewMode === 'list' ? '2px solid var(--accent-primary)' : '2px solid transparent',
+                                            color: viewMode === 'list' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                            fontSize: '0.85rem',
+                                            fontWeight: '500',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px'
+                                        }}
+                                    >
+                                        <Clock size={16} />
+                                        History
+                                    </button>
                                 </div>
-                                {dailyData.length > 10 && (
-                                    <p className="text-muted" style={{ textAlign: 'center', marginTop: '12px', fontSize: '0.75rem' }}>
-                                        Showing last 10 of {dailyData.length} classes
-                                    </p>
-                                )}
+
+                                {/* Tab Content */}
+                                <div style={{ padding: '16px' }}>
+                                    {viewMode === 'calendar' ? (
+                                        <AttendanceCalendar dailyData={dailyData} />
+                                    ) : (
+                                        <>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                {[...dailyData]
+                                                    .sort((a, b) => {
+                                                        const parseDate = (item) => {
+                                                            const dt = item.datetime || item.attendancedate || '';
+                                                            const datePart = dt.split(' (')[0];
+                                                            const parts = datePart.split('/');
+                                                            if (parts.length === 3) {
+                                                                return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                                                            }
+                                                            return new Date(0);
+                                                        };
+                                                        return parseDate(b) - parseDate(a);
+                                                    })
+                                                    .slice(0, 10)
+                                                    .map((d, i) => {
+                                                        const status = d.present || d.studentstatus || 'Unknown';
+                                                        const isPresent = status === 'Present' || status === 'P';
+                                                        const datetime = d.datetime || d.attendancedate || '';
+                                                        const datePart = datetime.split(' (')[0];
+                                                        const timePart = datetime.match(/\((.+)\)/)?.[1] || '';
+
+                                                        let formattedDate = datePart;
+                                                        if (datePart) {
+                                                            const parts = datePart.split('/');
+                                                            if (parts.length === 3) {
+                                                                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                                                formattedDate = `${months[parseInt(parts[1]) - 1]} ${parseInt(parts[0])}`;
+                                                            }
+                                                        }
+
+                                                        return (
+                                                            <div
+                                                                key={i}
+                                                                style={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'space-between',
+                                                                    padding: '12px 14px',
+                                                                    backgroundColor: 'var(--background)',
+                                                                    borderRadius: '10px',
+                                                                    fontSize: '0.85rem',
+                                                                    borderLeft: `3px solid ${isPresent ? '#00D9FF' : '#FF6B6B'}`
+                                                                }}
+                                                            >
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                                    {isPresent ? (
+                                                                        <CheckCircle size={18} style={{ color: '#00D9FF' }} />
+                                                                    ) : (
+                                                                        <XCircle size={18} style={{ color: '#FF6B6B' }} />
+                                                                    )}
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                                        <span style={{ fontWeight: '500' }}>
+                                                                            {formattedDate || `Class ${dailyData.length - i}`}
+                                                                        </span>
+                                                                        {(d.classtype || timePart) && (
+                                                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                                                {d.classtype}{d.classtype && timePart ? ' • ' : ''}{timePart}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <span style={{
+                                                                    color: isPresent ? '#00D9FF' : '#FF6B6B',
+                                                                    fontWeight: '600',
+                                                                    fontSize: '0.8rem'
+                                                                }}>
+                                                                    {status}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                            </div>
+                                            {dailyData.length > 10 && (
+                                                <p className="text-muted" style={{ textAlign: 'center', marginTop: '12px', fontSize: '0.75rem' }}>
+                                                    Showing last 10 of {dailyData.length} classes
+                                                </p>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         )}
 

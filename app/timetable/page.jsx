@@ -304,12 +304,17 @@ export default function Timetable() {
 
         if (!subjectAtt) return null;
 
+        // Get fraction summary from cached daily attendance
+        const fractionSummaries = Storage.getSubjectFractionSummaries();
+        const subjectCodeForFraction = subjectAtt.individualsubjectcode || subjectAtt.subjectCode;
+        const fraction = fractionSummaries[subjectCodeForFraction];
+
         return {
             percentage: subjectAtt.percentage,
             Lpercentage: subjectAtt.Lpercentage,
             Tpercentage: subjectAtt.Tpercentage,
-            present: subjectAtt.LTpresent,
-            total: subjectAtt.LTtotal
+            present: fraction?.attended ?? subjectAtt.LTpresent,
+            total: fraction?.total ?? subjectAtt.LTtotal
         };
     };
 

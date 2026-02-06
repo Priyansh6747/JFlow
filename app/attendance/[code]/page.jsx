@@ -265,9 +265,24 @@ export default function AttendanceDetailPage({ params }) {
                                     alignItems: 'center',
                                     marginBottom: '16px'
                                 }}>
-                                    <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                                        Overall Attendance
-                                    </span>
+                                    <div>
+                                        <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                                            Overall Attendance
+                                        </span>
+                                        {/* Attended/Total fraction */}
+                                        {dailyData.length > 0 && (
+                                            <div style={{
+                                                fontSize: '0.8rem',
+                                                color: 'var(--text-secondary)',
+                                                marginTop: '4px'
+                                            }}>
+                                                {dailyData.filter(d => {
+                                                    const status = d.present || d.studentstatus || '';
+                                                    return status === 'Present' || status === 'P';
+                                                }).length} / {dailyData.length} classes
+                                            </div>
+                                        )}
+                                    </div>
                                     <span style={{
                                         fontSize: '2rem',
                                         fontWeight: '600',

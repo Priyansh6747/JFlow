@@ -156,19 +156,30 @@ export default function AttendancePage() {
                     </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {attendance.map((att, index) => (
-                            <AttendanceCard
-                                key={att.subjectCode || index}
-                                code={att.subjectCode}
-                                name={att.subjectName}
-                                percentage={att.percentage || 0}
-                                attendedClasses={att.attendedClasses}
-                                totalClasses={att.totalClasses}
-                                Lpercentage={att.Lpercentage}
-                                Tpercentage={att.Tpercentage}
-                                targetAttendance={targetAttendance}
-                            />
-                        ))}
+                        {(() => {
+                            // Get fraction summaries from cached daily attendance
+                            const fractionSummaries = Storage.getSubjectFractionSummaries();
+
+                            return attendance.map((att, index) => {
+                                // Get fraction for this subject
+                                const subjectCode = att.individualsubjectcode || att.subjectCode;
+                                const fraction = fractionSummaries[subjectCode];
+
+                                return (
+                                    <AttendanceCard
+                                        key={att.subjectCode || index}
+                                        code={att.subjectCode}
+                                        name={att.subjectName}
+                                        percentage={att.percentage || 0}
+                                        attendedClasses={fraction?.attended ?? att.attendedClasses}
+                                        totalClasses={fraction?.total ?? att.totalClasses}
+                                        Lpercentage={att.Lpercentage}
+                                        Tpercentage={att.Tpercentage}
+                                        targetAttendance={targetAttendance}
+                                    />
+                                );
+                            });
+                        })()}
                     </div>
                 )}
             </main>

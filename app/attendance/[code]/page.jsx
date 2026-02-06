@@ -13,6 +13,7 @@ import { Storage } from '@/lib/storage';
 import { Portal } from '@/lib/JiitManager';
 import { DailyAttendanceCache } from '@/lib/dailyAttendanceCache';
 import AttendanceChart from '@/components/AttendanceChart';
+import AttendanceCalendar from '@/components/AttendanceCalendar';
 import { ArrowLeft, RefreshCw, Calendar, Clock, CheckCircle, XCircle, Target, Loader2 } from 'lucide-react';
 
 export default function AttendanceDetailPage({ params }) {
@@ -370,6 +371,16 @@ export default function AttendanceDetailPage({ params }) {
                                 <AttendanceChart data={chartData} height={180} targetAttendance={targetAttendance} />
                             )}
                         </div>
+
+                        {/* Calendar View */}
+                        {dailyData.length > 0 && (
+                            <div style={{ marginBottom: '20px' }}>
+                                <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                                    Calendar View
+                                </h3>
+                                <AttendanceCalendar dailyData={dailyData} />
+                            </div>
+                        )}
 
                         {/* Daily Breakdown */}
                         {dailyData.length > 0 && (

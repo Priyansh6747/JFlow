@@ -577,65 +577,54 @@ export default function Timetable() {
                                         {attendancePercent !== undefined && (
                                             <div style={{
                                                 display: 'flex',
-                                                flexDirection: 'column',
                                                 alignItems: 'center',
-                                                justifyContent: 'center',
-                                                minWidth: '65px',
-                                                gap: '2px'
+                                                gap: '10px'
                                             }}>
+                                                {/* Text info - stacked vertically on LEFT */}
                                                 <div style={{
                                                     display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    width: '44px',
-                                                    height: '44px',
-                                                    borderRadius: '9999px',
-                                                    border: `2px solid ${attendancePercent >= targetAttendance ? '#00D9FF' : attendancePercent >= targetAttendance - 10 ? '#F5A623' : '#FF6B6B'}`,
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: '600',
-                                                    color: attendancePercent >= targetAttendance ? '#00D9FF' : attendancePercent >= targetAttendance - 10 ? '#F5A623' : '#FF6B6B'
+                                                    flexDirection: 'column',
+                                                    alignItems: 'flex-end',
+                                                    gap: '1px'
                                                 }}>
-                                                    {attendancePercent}%
-                                                </div>
-                                                {attendanceInfo?.present !== undefined && attendanceInfo?.total !== undefined && (
+                                                    {/* Percentage */}
                                                     <span style={{
-                                                        fontSize: '0.65rem',
-                                                        color: 'var(--text-secondary)',
-                                                        whiteSpace: 'nowrap'
+                                                        fontSize: '0.85rem',
+                                                        fontWeight: '700',
+                                                        color: attendancePercent >= targetAttendance ? '#00D9FF' : attendancePercent >= targetAttendance - 10 ? '#F5A623' : '#FF6B6B'
                                                     }}>
-                                                        {attendanceInfo.present}/{attendanceInfo.total}
+                                                        {attendancePercent}%
                                                     </span>
-                                                )}
-                                                {/* Guidance: need X or can skip X */}
-                                                {attendanceInfo?.present !== undefined && attendanceInfo?.total !== undefined && (() => {
-                                                    const guidance = getAttendanceGuidance(attendanceInfo.present, attendanceInfo.total, targetAttendance);
-                                                    if (!guidance) return null;
 
-                                                    if (guidance.type === 'safe') {
+                                                    {/* Fraction */}
+                                                    {attendanceInfo?.present !== undefined && attendanceInfo?.total !== undefined && (
+                                                        <span style={{
+                                                            fontSize: '0.65rem',
+                                                            color: 'var(--text-secondary)'
+                                                        }}>
+                                                            {attendanceInfo.present}/{attendanceInfo.total}
+                                                        </span>
+                                                    )}
+
+                                                    {/* Guidance */}
+                                                    {attendanceInfo?.present !== undefined && attendanceInfo?.total !== undefined && (() => {
+                                                        const guidance = getAttendanceGuidance(attendanceInfo.present, attendanceInfo.total, targetAttendance);
+                                                        if (!guidance) return null;
                                                         return (
                                                             <span style={{
                                                                 fontSize: '0.6rem',
-                                                                color: '#00D9FF',
-                                                                whiteSpace: 'nowrap',
+                                                                color: guidance.type === 'safe' ? '#00D9FF' : '#FF6B6B',
                                                                 fontWeight: '500'
                                                             }}>
-                                                                {guidance.count === 0 ? 'At target' : `Skip ${guidance.count}`}
+                                                                {guidance.type === 'safe'
+                                                                    ? (guidance.count === 0 ? 'On target' : `Skip ${guidance.count}`)
+                                                                    : `Need ${guidance.count}`}
                                                             </span>
                                                         );
-                                                    } else {
-                                                        return (
-                                                            <span style={{
-                                                                fontSize: '0.6rem',
-                                                                color: '#FF6B6B',
-                                                                whiteSpace: 'nowrap',
-                                                                fontWeight: '500'
-                                                            }}>
-                                                                Need {guidance.count}
-                                                            </span>
-                                                        );
-                                                    }
-                                                })()}
-                                                {/* Planning link */}
+                                                    })()}
+                                                </div>
+
+                                                {/* Projection icon on RIGHT */}
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -645,15 +634,14 @@ export default function Timetable() {
                                                     style={{
                                                         background: 'none',
                                                         border: 'none',
-                                                        padding: '4px',
+                                                        padding: '6px',
                                                         cursor: 'pointer',
-                                                        color: 'var(--text-secondary)',
+                                                        color: attendancePercent >= targetAttendance ? '#00D9FF' : attendancePercent >= targetAttendance - 10 ? '#F5A623' : '#FF6B6B',
                                                         display: 'flex',
-                                                        alignItems: 'center',
-                                                        marginTop: '2px'
+                                                        alignItems: 'center'
                                                     }}
                                                 >
-                                                    <TrendingUp size={14} />
+                                                    <TrendingUp size={20} />
                                                 </button>
                                             </div>
                                         )}
